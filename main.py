@@ -1,3 +1,4 @@
+```python
 import asyncio
 import json
 from collections import defaultdict
@@ -7,7 +8,8 @@ import websockets
 from questdb.ingress import Sender
 
 # ================== ตั้งค่า ==================
-HOST = os.getenv("QUESTDB_HOST", "questdbquestdb-production-845d.up.railway.app")
+HOST = os.getenv("QUESTDB_HOST", "metro.proxy.rlwy.net")
+PORT = os.getenv("QUESTDB_PORT", "25708")
 # ===========================================
 
 TICKERS = ['BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'DOT', 'AVAX', 'LINK', 'LTC', 'BCH', 'TRX', 'MATIC', 'SUI', 'APT', 'NEAR', 'TIA', 'ATOM', 'ALGO', 'STX', 'EGLD', 'KAS', 'USDT', 'USDC', 'FDUSD', 'DAI', 'FRAX', 'RLUSD', 'DOGE', 'SHIB', 'PEPE', 'FLOKI', 'BONK', 'WIF', 'MEW', 'NEIRO', 'BRETT', 'FARTCOIN', 'POPCAT', 'MOODENG', 'GOAT', 'FET', 'TAO', 'RENDER', 'HYPE', 'AKT', 'AR', 'FIL', 'GRT', 'ICP', 'THETA', 'LPT', 'JASMY', 'IO', 'NOS', 'PLANCK', 'AAVE', 'UNI', 'SUSHI', 'CRV', 'MKR', 'DYDX', 'SNX', '1INCH', 'PYTH', 'API3', 'JUP', 'ENA', 'PENDLE', 'RAY', 'BREV', 'ZENT', 'ATH', 'CGPT', 'COOKIE', 'ZKC', 'KAITO', 'MORPHO', 'SOMI', 'TURTLE', 'SENT', 'HYPER', 'ZAMA', 'GALA', 'AXS', 'SAND', 'MANA', 'ILV', 'IMX', 'BEAM']
@@ -37,7 +39,7 @@ async def handle_trade(data):
 
 async def flush_to_questdb(ts):
     try:
-        with Sender.from_conf(f"tcp::addr={HOST}:9009;") as sender:
+        with Sender.from_conf(f"tcp::addr={HOST}:{PORT};") as sender:
             for symbol, trades in buffer.items():
                 if not trades: continue
                 buy_vol = sum(q for _, q, b in trades if b)
@@ -61,7 +63,7 @@ async def flush_to_questdb(ts):
 async def main():
     stream_names = [f"{s.lower()}@trade" for s in SYMBOLS]
     url = f"wss://fstream.binance.com/stream?streams={'/'.join(stream_names)}"
-    print(f"🚀 เชื่อมต่อ Binance {len(SYMBOLS)} symbols... Host={HOST}")
+    print(f"🚀 เชื่อมต่อ Binance {len(SYMBOLS)} symbols... Host={HOST}:{PORT}")
     async with websockets.connect(url) as ws:
         while True:
             msg = await ws.recv()
@@ -71,3 +73,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+```
