@@ -1,13 +1,14 @@
 import asyncio
 import json
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timezone
+import os
 import websockets
 from questdb.ingress import Sender
 
-# ================== ตั้งค่าของคุณ ==================
-HOST = "questdbquestdb-production-845d.up.railway.app"   # ← host QuestDB ของคุณ
-# ==================================================
+# ================== ตั้งค่า ==================
+HOST = os.getenv("QUESTDB_HOST", "questdbquestdb-production-845d.up.railway.app")
+# ===========================================
 
 TICKERS = ['BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'DOT', 'AVAX', 'LINK', 'LTC', 'BCH', 'TRX', 'MATIC', 'SUI', 'APT', 'NEAR', 'TIA', 'ATOM', 'ALGO', 'STX', 'EGLD', 'KAS', 'USDT', 'USDC', 'FDUSD', 'DAI', 'FRAX', 'RLUSD', 'DOGE', 'SHIB', 'PEPE', 'FLOKI', 'BONK', 'WIF', 'MEW', 'NEIRO', 'BRETT', 'FARTCOIN', 'POPCAT', 'MOODENG', 'GOAT', 'FET', 'TAO', 'RENDER', 'HYPE', 'AKT', 'AR', 'FIL', 'GRT', 'ICP', 'THETA', 'LPT', 'JASMY', 'IO', 'NOS', 'PLANCK', 'AAVE', 'UNI', 'SUSHI', 'CRV', 'MKR', 'DYDX', 'SNX', '1INCH', 'PYTH', 'API3', 'JUP', 'ENA', 'PENDLE', 'RAY', 'BREV', 'ZENT', 'ATH', 'CGPT', 'COOKIE', 'ZKC', 'KAITO', 'MORPHO', 'SOMI', 'TURTLE', 'SENT', 'HYPER', 'ZAMA', 'GALA', 'AXS', 'SAND', 'MANA', 'ILV', 'IMX', 'BEAM']
 
@@ -15,7 +16,7 @@ SYMBOLS = [f"{t}USDT" for t in TICKERS if t not in ['USDT','USDC','DAI','FDUSD',
 SYMBOLS = list(dict.fromkeys(SYMBOLS))
 
 buffer = defaultdict(list)
-last_flush = datetime.utcnow()
+last_flush = datetime.now(timezone.utc)
 
 async def handle_trade(data):
     global last_flush
@@ -24,7 +25,7 @@ async def handle_trade(data):
     qty = float(data['q'])
     is_buy = not data['m']
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     ts_floor = now.replace(microsecond=0)
 
     buffer[symbol].append((price, qty, is_buy))
@@ -36,7 +37,7 @@ async def handle_trade(data):
 
 async def flush_to_questdb(ts):
     try:
-        with Sender(HOST, 9009) as sender:
+        with Sender.from_conf(f"tcp::addr={HOST}:9009;") as sender:
             for symbol, trades in buffer.items():
                 if not trades: continue
                 buy_vol = sum(q for _, q, b in trades if b)
@@ -60,7 +61,7 @@ async def flush_to_questdb(ts):
 async def main():
     stream_names = [f"{s.lower()}@trade" for s in SYMBOLS]
     url = f"wss://fstream.binance.com/stream?streams={'/'.join(stream_names)}"
-    print(f"🚀 เชื่อมต่อ Binance {len(SYMBOLS)} symbols...")
+    print(f"🚀 เชื่อมต่อ Binance {len(SYMBOLS)} symbols... Host={HOST}")
     async with websockets.connect(url) as ws:
         while True:
             msg = await ws.recv()
