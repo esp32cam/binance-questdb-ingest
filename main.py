@@ -1,8 +1,7 @@
-
 import asyncio
 import json
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import os
 import websockets
 from questdb.ingress import Sender
@@ -10,6 +9,7 @@ from questdb.ingress import Sender
 # ================== ตั้งค่า ==================
 HOST = os.getenv("QUESTDB_HOST", "metro.proxy.rlwy.net")
 PORT = os.getenv("QUESTDB_PORT", "25708")
+BANGKOK_TZ = timedelta(hours=7)  # Bangkok is UTC+7
 # ===========================================
 
 TICKERS = ['BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'DOT', 'AVAX', 'LINK', 'LTC', 'BCH', 'TRX', 'MATIC', 'SUI', 'APT', 'NEAR', 'TIA', 'ATOM', 'ALGO', 'STX', 'EGLD', 'KAS', 'USDT', 'USDC', 'FDUSD', 'DAI', 'FRAX', 'RLUSD', 'DOGE', 'SHIB', 'PEPE', 'FLOKI', 'BONK', 'WIF', 'MEW', 'NEIRO', 'BRETT', 'FARTCOIN', 'POPCAT', 'MOODENG', 'GOAT', 'FET', 'TAO', 'RENDER', 'HYPE', 'AKT', 'AR', 'FIL', 'GRT', 'ICP', 'THETA', 'LPT', 'JASMY', 'IO', 'NOS', 'PLANCK', 'AAVE', 'UNI', 'SUSHI', 'CRV', 'MKR', 'DYDX', 'SNX', '1INCH', 'PYTH', 'API3', 'JUP', 'ENA', 'PENDLE', 'RAY', 'BREV', 'ZENT', 'ATH', 'CGPT', 'COOKIE', 'ZKC', 'KAITO', 'MORPHO', 'SOMI', 'TURTLE', 'SENT', 'HYPER', 'ZAMA', 'GALA', 'AXS', 'SAND', 'MANA', 'ILV', 'IMX', 'BEAM']
@@ -18,7 +18,7 @@ SYMBOLS = [f"{t}USDT" for t in TICKERS if t not in ['USDT','USDC','DAI','FDUSD',
 SYMBOLS = list(dict.fromkeys(SYMBOLS))
 
 buffer = defaultdict(list)
-last_flush = datetime.now(timezone.utc)
+last_flush = datetime.now(timezone.utc) + BANGKOK_TZ
 
 async def handle_trade(data):
     global last_flush
@@ -27,7 +27,7 @@ async def handle_trade(data):
     qty = float(data['q'])
     is_buy = not data['m']
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc) + BANGKOK_TZ
     ts_floor = now.replace(microsecond=0)
 
     buffer[symbol].append((price, qty, is_buy))
@@ -73,4 +73,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
